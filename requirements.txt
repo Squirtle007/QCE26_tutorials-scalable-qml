@@ -1,0 +1,70 @@
+# Python environment for the QCE26 tutorial.
+#
+# GENERATED — this is the Dockerfile's pin template rendered for the CUDA 13.2
+# variant. The Dockerfile is authoritative and does NOT read this file; it keeps
+# the same block as a template and substitutes @TORCH_TAG@ / @CUDA_FAMILY@ /
+# @CUPY_PKG@ at build time so one Dockerfile builds both variants.
+#
+# For the CUDA 12.6 variant, substitute: cu126 / cu12 / cupy-cuda12x.
+# run.sh renders the template itself and warns if this copy has drifted.
+--extra-index-url https://download.pytorch.org/whl/cu132
+
+# --- PyTorch, built against CUDA 13.2 -------------------------------------
+# torch 2.11.0 has no cu132 build; that index starts at 2.12.0. 2.12.1 is
+# the smallest step up from the version the notebooks were developed against.
+# Both wheels pull nvidia's cuda-toolkit==13.2.1 runtime wheels.
+torch==2.12.1+cu132
+torchvision==0.27.1+cu132
+
+tqdm==4.67.3
+scikit-learn==1.8.0
+
+# --- cuQuantum -------------------------------------------------------------
+# The -cu13 wheel, not the `cuquantum-python` meta sdist: that sdist imports
+# pkg_resources at build time, removed in setuptools 82.0.0. 26.3.x is also the
+# series matching CUDA-Q 0.15.x; 26.1.0 pairs with 0.14.x and conflicts on
+# cudensitymat.
+cuquantum-python-cu13==26.3.2
+
+# Component pins. These matter because CUDA-Q is installed natively in the base
+# image (/opt/nvidia/cudaq), not as a pip package, so the resolver cannot see
+# its constraints — and the image puts dist-packages/cuquantum/lib first on
+# LD_LIBRARY_PATH, so these wheels are the libraries CUDA-Q actually loads.
+# Unpinned, cuquantum-python's loose upper bounds (<2, <3, <0.6) pull
+# custatevec 1.14 / cutensornet 2.13 / cupy 14, all outside what the metadata
+# for cuda-quantum-cu13 0.15.1 declares it supports.
+custatevec-cu13==1.13.1
+cutensornet-cu13==2.12.2
+cudensitymat-cu13==0.5.2
+cupy-cuda13x==13.6.0
+
+# --- build tooling ---------------------------------------------------------
+# cmake: cudaq_einsum's build shells out to it (also installed from apt, so a
+# `cmake` is on PATH regardless of install order).
+cmake==4.3.2
+# ninja: needed to build qkan._C below, and again at runtime — qkan's GPU
+# compatibility guard JIT-rebuilds its kernels when the prebuilt SASS does not
+# match the local GPU.
+ninja
+# setuptools and wheel are installed by the Dockerfile layer below, before this
+# file is read: qkan builds with --no-build-isolation-package and so needs them
+# already present, not merely listed here.
+
+# --- qkan ------------------------------------------------------------------
+# Built from source: the pinned commit is a 0.2.4dev revision, so no pre-built
+# wheel exists on the GitHub release page.
+#
+# The [cute] extra is deliberately NOT requested — it expands to deprecated
+# nvidia-*-cu13 stub sdists that abort on wheel build, so `pip install
+# qkan[cute]` fails outright on any CUDA version. It only existed to pull
+# runtime CUDA libraries into environments lacking them; this image has them
+# from both the apt CUDA 13.2 toolkit and torch's cuda-toolkit==13.2.1 wheels.
+qkan @ git+https://github.com/Jim137/qkan.git@549c1aa6bbff7f7264a9e60d25d38165176dc194
+
+# --- notebook interface ----------------------------------------------------
+jupyterlab
+ipywidgets
+
+# NOTE: cudaq_einsum and the multi-stream cuTENSOR backend that 04_cutn-qsvm.ipynb
+# needs are not on PyPI. They are built from the pinned Einsum-Simulator
+# repository in section 6 of the Dockerfile, not installed from here.

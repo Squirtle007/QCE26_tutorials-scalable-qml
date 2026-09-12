@@ -1,0 +1,26 @@
+# Build context hygiene. The image only needs requirements.txt and (when it is
+# vendored) the Einsum-Simulator source tree; everything below would otherwise
+# push a ~5.8 GB context to the daemon.
+
+venv/
+.git/
+.gitignore
+
+# Slide sources and handouts — not part of the runtime environment.
+*.pptx
+*.pdf
+Session3-Quantum_for_AI/
+
+# Datasets are fetched at runtime by the notebooks.
+**/data/
+**/figures/
+**/slides_assets/
+
+# Python / Jupyter scratch.
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+*.egg-info/
+build/
+dist/
