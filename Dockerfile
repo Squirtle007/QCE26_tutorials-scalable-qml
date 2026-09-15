@@ -34,11 +34,14 @@
 #    ("Cannot uninstall pip 24.0"). uv installs alongside it instead, which
 #    avoids the problem entirely — one of the reasons this image uses uv.
 #
-# 3. `qkan[cute]` fails on every CUDA version. The extra expands to
-#    nvidia-cublas-cu13 / nvidia-cuda-runtime-cu13 / etc.; NVIDIA renamed those
-#    wheels for CUDA 13 (now unsuffixed, under nvidia/cu13/) and the old names
-#    are stub sdists whose setup.py calls sys.exit(1) on any wheel build. The
-#    extra is not requested; its useful member, ninja, is pinned directly.
+# 3. qkan's CuTe extra needs a recent qkan, and the family-specific spelling.
+#    NVIDIA renamed the CUDA 13 runtime wheels — nvidia-cublas-cu13 became
+#    nvidia-cublas, and so on — leaving 0.0.1 sdist stubs at the old names whose
+#    setup.py calls sys.exit(1) on any wheel build. qkan revisions predating
+#    PR #29 still list the old names, so on CUDA 13 the extra could not install
+#    at all; the pin below is that merge commit. It is requested as
+#    cute-cu13 / cute-cu12 rather than through the [cute] alias, which is
+#    hardwired to cu13 and would be wrong for the cu12 variant.
 #
 # 4. `cuquantum-python` (the meta sdist) imports pkg_resources at build time,
 #    which setuptools >= 82.0.0 no longer ships. The -cu13 wheel is pinned
@@ -251,12 +254,22 @@ ninja
 # Built from source: the pinned commit is a 0.2.4dev revision, so no pre-built
 # wheel exists on the GitHub release page.
 #
-# The [cute] extra is deliberately NOT requested — it expands to deprecated
-# nvidia-*-cu13 stub sdists that abort on wheel build, so `pip install
-# qkan[cute]` fails outright on any CUDA version. It only existed to pull
-# runtime CUDA libraries into environments lacking them; this image has them
-# from both the apt CUDA 13.2 toolkit and torch's cuda-toolkit==13.2.1 wheels.
-qkan @ git+https://github.com/Jim137/qkan.git@549c1aa6bbff7f7264a9e60d25d38165176dc194
+# The [cute-<family>] extra pulls the NVIDIA runtime wheels the compiled
+# qkan._C links against, plus the ninja its runtime guard rebuilds with. It is
+# requested per family rather than through the [cute] alias, which always
+# expands to cute-cu13 and would drag CUDA 13 wheels into a cu12 build.
+#
+# Requesting it needs qkan >= this pin. Earlier revisions spelled the CUDA 13
+# wheels nvidia-cublas-cu13 / nvidia-cuda-runtime-cu13 / etc.; NVIDIA retired
+# those names in favour of unsuffixed ones and left 0.0.1 sdist stubs behind
+# whose setup.py calls sys.exit(1) on any wheel build, so `pip install
+# qkan[cute]` failed outright. Fixed upstream in qkan PR #29 — this pin is that
+# merge commit, which also carries a CuTe int32-overflow fix.
+#
+# It pulls nothing new here: torch 2.12.1 requires cuda-toolkit==13.2.1, which
+# already pins nvidia-cublas / -cuda-runtime / -cuda-nvrtc / -cusparse exactly,
+# and the extra's bare names intersect with those rather than upgrading past.
+qkan[cute-@CUDA_FAMILY@] @ git+https://github.com/Jim137/qkan.git@4de1642c91fb6eddb785dfa3e1ed9de3e707a625
 
 # --- notebook interface ----------------------------------------------------
 jupyterlab

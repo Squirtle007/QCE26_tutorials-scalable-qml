@@ -53,7 +53,7 @@ The tutorial is delivered as two 90-minute blocks. The morning block establishes
 - **Focus:** Three QML model families at scale, and the simulation technique each one requires.
 - **Key Topics:**
     - **Quantum Fast Weight Programmers (QFWP):** A parameterized quantum circuit that reprograms the weights of a classical network, giving sequence modeling without explicit recurrence.
-    - **Quantum-Inspired Kolmogorov-Arnold Networks (QKAN-LLM):** Data re-uploading activations as parameter-efficient replacements for MLP blocks, from function fitting through GPT-2-scale transformer blocks on the cuTensorNet solver path.
+    - **Quantum-Inspired Kolmogorov-Arnold Networks (QKAN-LLM):** Data re-uploading activations as parameter-efficient replacements for MLP blocks, from function fitting through GPT-2-scale transformer blocks on the fused CuTe-kernel solver path.
     - **Quantum-Enhanced SVM:** A classical SVM with a quantum feature-map kernel, captured once as a tensor network and contracted in batch via cuTensorNet, with a multi-stream cuTensor backend for further HPC scaling.
 
 <br>
@@ -96,6 +96,8 @@ docker run --gpus all cudaq-qce26:cu132 -c qce26-verify
 `qce26-verify` reports the torch / CUDA-Q / cuQuantum / qkan versions and checks the GPU targets. The published image is [`jiunchengj81589/cudaq-qce26:cu132`](https://hub.docker.com/r/jiunchengj81589/cudaq-qce26).
 
 It is based on `nvcr.io/nvidia/quantum/cuda-quantum:cu13-0.15.1` and adds the CUDA 13.2 toolchain, since the published CUDA-Q images ship CUDA 13.0 and the tutorial's PyTorch and qkan builds target 13.2. If you already have a CUDA-Q container running, `bash run.sh` from the repository root performs the same setup in place.
+
+For local work without Docker, `bash setup-venv.sh` builds a `.venv` on the host with [`uv`](https://docs.astral.sh/uv/) — no apt, no root. It takes the CUDA toolchain from PyPI (`nvidia-cuda-nvcc` and its CCCL/nvvm companions, pinned to whatever CUDA the pinned torch was built against) so qkan's CuTe extension compiles even when the host's system CUDA is a different version; without that the extension is skipped and you get a silently pure-Python qkan. It builds only for the GPU in the machine, so it is much quicker than the image's four-architecture build, and it finishes by checking that `qkan._C` loaded and that the `cute` kernel agrees with the reference solver. It covers notebooks 02 and 03 — CUDA-Q, `cudaq_einsum` and the multi-stream cuTENSOR backend are installed natively or built from source by the Dockerfile, so notebooks 00, 01 and 04 still need the image.
 
 The Dockerfile is self-contained — it inlines the dependency pins, so no other file from the repository is needed to build it. Python packages are installed with [`uv`](https://docs.astral.sh/uv/).
 

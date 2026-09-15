@@ -30,7 +30,7 @@ By the end of this block, participants will understand how a quantum circuit can
 ### Quantum-Inspired Architectures for Large Language Models
 
 - **QKAN-LLM as an introductory example:** [Quantum-inspired Kolmogorov-Arnold Networks](https://arxiv.org/abs/2509.14026) as an LLM backbone, using data re-uploading activations for parameter reduction and function fitting.
-- **Advanced — GPT-scale training and billion-parameter inference:** Train a GPT-scale (~100M parameter) model and demonstrate pretrained QKAN-LLM inference at billion-parameter scale, routing every activation through the `cutn` (cuTensorNet) solver path; without cuQuantum installed the same code path still runs as a local fallback, so those timings are functional rather than accelerated.
+- **Advanced — GPT-scale training and billion-parameter inference:** Train a GPT-scale (~100M parameter) model and demonstrate pretrained QKAN-LLM inference at billion-parameter scale, routing every activation through the `cute` solver path, qkan's fused CUTLASS/CuTe CUDA kernels; the kernels ship in the compiled `qkan._C` extension, and without it `solver="cute"` raises rather than falling back silently.
 
 ### Scalable Quantum-Enhanced Support Vector Machines
 

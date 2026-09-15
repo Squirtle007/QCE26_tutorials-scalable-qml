@@ -33,6 +33,12 @@ cd "$(dirname "$(readlink -f "$0")")"
 
 CUDA_SUFFIX=13-2
 CUDA_DIR_VERSION=13.2
+# Wheel-naming family, PyTorch index tag and cupy package, mirroring the
+# Dockerfile build args of the same names. The requirements template is
+# rendered with these, so they must match the variant being installed.
+CUDA_FAMILY=cu13
+TORCH_TAG=cu132
+CUPY_PKG=cupy-cuda13x
 CUTLASS_REF=v4.7.1
 CUTLASS_PATH="${CUTLASS_PATH:-/opt/cutlass}"
 export CUTLASS_PATH
@@ -41,9 +47,13 @@ SITE_PACKAGES=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['purel
 # 0. Guard against requirements.txt drifting from the Dockerfile's inlined copy,
 #    which is authoritative.
 if [ -f Dockerfile ]; then
-    sed -n "/^COPY <<'REQEOF'/,/^REQEOF$/p" Dockerfile | sed '1d;$d' > /tmp/req-from-dockerfile.txt
-    if ! diff -q <(grep -v '^--extra-index-url' /tmp/req-from-dockerfile.txt) \
-                 <(sed -n '/^# --- PyTorch/,$p' requirements.txt) >/dev/null 2>&1; then
+    sed -n "/^COPY <<'REQEOF'/,/^REQEOF$/p" Dockerfile | sed '1d;$d' \
+        | sed -e "s/@TORCH_TAG@/${TORCH_TAG}/g" \
+              -e "s/@CUDA_FAMILY@/${CUDA_FAMILY}/g" \
+              -e "s/@CUPY_PKG@/${CUPY_PKG}/g" > /tmp/req-from-dockerfile.txt
+    if ! diff -u --label "Dockerfile (rendered for ${TORCH_TAG})" --label requirements.txt \
+             <(grep -v '^--extra-index-url' /tmp/req-from-dockerfile.txt) \
+             <(sed -n '/^# --- PyTorch/,$p' requirements.txt); then
         echo "WARNING: requirements.txt differs from the pin block inlined in Dockerfile."
         echo "         The Dockerfile is authoritative; using requirements.txt anyway."
     fi
@@ -110,7 +120,7 @@ uvpip() { sudo -E "$UV_BIN" pip install "$@"; }
 # 4. PyTorch first, on its own: qkan compiles a CUDA extension against the
 #    installed torch, reading torch.version.cuda and the C++11 ABI flag off it.
 uvpip --index-strategy unsafe-best-match \
-    --extra-index-url https://download.pytorch.org/whl/cu132 \
+    --extra-index-url "https://download.pytorch.org/whl/${TORCH_TAG}" \
     $(grep -E '^(torch|torchvision)==' requirements.txt)
 uvpip "setuptools<82" wheel ninja
 python3 -c "import torch; assert torch.version.cuda == '13.2', torch.version.cuda"
@@ -125,7 +135,7 @@ QKAN_CUDA_ARCHS="${QKAN_CUDA_ARCHS:-80;90;100;120}" \
 NVCC_THREADS="${NVCC_THREADS:-8}" \
 MAX_JOBS="${MAX_JOBS:-4}" \
     uvpip --index-strategy unsafe-best-match \
-        --extra-index-url https://download.pytorch.org/whl/cu132 \
+        --extra-index-url "https://download.pytorch.org/whl/${TORCH_TAG}" \
         --no-build-isolation-package qkan \
         -r requirements.txt
 
