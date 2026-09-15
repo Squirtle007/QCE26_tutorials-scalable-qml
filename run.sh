@@ -114,8 +114,16 @@ export UV_SYSTEM_PYTHON=1 UV_BREAK_SYSTEM_PACKAGES=1 UV_NO_CACHE=1 UV_LINK_MODE=
 # this because it builds as root. Route every system-site install through sudo,
 # preserving the UV_* settings; uv's absolute path is needed because sudo resets
 # PATH and uv lives under $HOME/.local/bin.
+#
+# HOME is reset to root's for the sudo'd call even though -E preserves the rest
+# of the environment. Without that, uv keeps its state under the *invoking*
+# user's $HOME/.local/share/uv and, running as root, leaves ~/.local/share
+# owned by root — after which Jupyter, running as the normal user, cannot
+# create ~/.local/share/jupyter and dies with EACCES before serving anything.
+# Only the UV_* settings above need to survive; uv installs into the system
+# site-packages, so it has no business in this user's home at all.
 UV_BIN="$(command -v uv)"
-uvpip() { sudo -E "$UV_BIN" pip install "$@"; }
+uvpip() { sudo -E env HOME=/root "$UV_BIN" pip install "$@"; }
 
 # 4. PyTorch first, on its own: qkan compiles a CUDA extension against the
 #    installed torch, reading torch.version.cuda and the C++11 ABI flag off it.
@@ -226,6 +234,51 @@ if [ "$(cuinit_status)" = "804" ]; then
         echo "      Resolved: libcuda.so.1 -> $(ldconfig -p | grep -m1 'libcuda.so.1' | sed 's/.*=> //')"
     else
         echo "      WARNING: cuInit still returns $st; the GPU may be unusable here."
+    fi
+fi
+
+# The mirror image of the case above, and the one a Brev A100 actually hits. The
+# runtime does not always inject the compat path: on some hosts the conf it drops
+# lists only /usr/lib/x86_64-linux-gnu, so libcuda.so.1 resolves to the *host*
+# driver. A driver older than the toolkit then leaves every CUDA-13 wheel dead —
+# torch reports "driver is too old" and torch.cuda.is_available() is False — even
+# though the image ships a compat libcuda that would work.
+#
+# So: if the driver reports an older CUDA than the toolkit needs, and a compat
+# libcuda is present but unused, put it first on the loader's search path. Named
+# to sort ahead of the runtime's own 00-nvcr-*.conf. Skipped entirely when the
+# branch above fired, because there compat is what was broken.
+DRIVER_CUDA_PROBE='import ctypes
+try:
+    lib = ctypes.CDLL("libcuda.so.1")
+    ver = ctypes.c_int()
+    if lib.cuInit(0) != 0:
+        raise SystemExit(print(0))
+    lib.cuDriverGetVersion(ctypes.byref(ver))
+    print(ver.value)
+except Exception:
+    print(0)'
+driver_cuda() { python3 -c "$DRIVER_CUDA_PROBE" 2>/dev/null || echo 0; }
+
+needed_cuda=$(( ${CUDA_DIR_VERSION%%.*} * 1000 ))
+if [ "$(cuinit_status)" = "0" ] && [ "$(driver_cuda)" -lt "$needed_cuda" ]; then
+    compat_dir=$(ls -d /usr/local/cuda-*/compat 2>/dev/null | tail -1)
+    if [ -n "$compat_dir" ] && [ -e "$compat_dir/libcuda.so.1" ]; then
+        echo
+        echo "NOTE: the host driver only provides CUDA $(( $(driver_cuda) / 1000 )).$(( $(driver_cuda) % 1000 / 10 )),"
+        echo "      but this install targets CUDA ${CUDA_DIR_VERSION}. Enabling the bundled"
+        echo "      forward-compatibility libcuda in ${compat_dir}."
+        echo "$compat_dir" | sudo tee /etc/ld.so.conf.d/00-cuda-compat.conf >/dev/null
+        sudo ldconfig
+        if [ "$(driver_cuda)" -ge "$needed_cuda" ]; then
+            echo "      Resolved: libcuda.so.1 -> $(ldconfig -p | grep -m1 'libcuda.so.1' | sed 's/.*=> //')"
+        else
+            echo "      WARNING: still CUDA $(( $(driver_cuda) / 1000 )).x after enabling compat."
+            echo "               Forward compatibility is only supported on data-centre GPUs;"
+            echo "               on others, build the cu126 variant instead."
+            sudo rm -f /etc/ld.so.conf.d/00-cuda-compat.conf
+            sudo ldconfig
+        fi
     fi
 fi
 
