@@ -110,7 +110,7 @@ The Dockerfile is self-contained — it inlines the dependency pins, so no other
 | Notebook | Block | Topic | Contributor | Institution |
 | :--- | :--- | :--- | :--- | :--- |
 | `00_cudaq_basics.ipynb` | Morning | QC Fundamentals and CUDA-Q Programming | Yun-Yuan Wang | NVIDIA |
-| `01_transformer_qaoa.ipynb` | Morning | Transformer-Based QAOA Optimization | Kuan-Cheng Chen | Imperial College London |
+| `01_transformer_qaoa.ipynb` | Morning | Transformer-Based QAOA Optimization | Kuan-Cheng Chen | JIJ Inc. |
 | `02_qfwp.ipynb` | Afternoon | Quantum Fast Weight Programmers | Samuel Yen-Chi Chen | Wells Fargo |
 | `03_qkan_basics.ipynb` | Afternoon | Quantum-Inspired Kolmogorov-Arnold Networks | Jiun-Cheng Jiang | NVIDIA |
 | `04_cutn-qsvm.ipynb` | Afternoon | Quantum-Enhanced Support Vector Machine | Tai-Yue Li | NCHC |
