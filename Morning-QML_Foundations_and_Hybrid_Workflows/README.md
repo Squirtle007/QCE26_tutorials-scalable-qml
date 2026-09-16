@@ -55,7 +55,7 @@ The hands-on notebook walks through five progressive learning objectives:
 | Notebook | Topic | Contributor | Institution |
 | :--- | :--- | :--- | :--- |
 | `00_cudaq_basics.ipynb` | QC Fundamentals and CUDA-Q Programming | Yun-Yuan Wang | NVIDIA |
-| `01_transformer_qaoa.ipynb` | Transformer-Based QAOA Optimization | Kuan-Cheng Chen | Imperial College London |
+| `01_transformer_qaoa.ipynb` | Transformer-Based QAOA Optimization | Kuan-Cheng (Louis) Chen | JIJ Inc. |
 
 <br>
 
