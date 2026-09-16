@@ -15,7 +15,7 @@ The second half assembles the tutorial's first complete hybrid workflow: a Trans
 | Welcome, QML Validation Motivation, and Stack Overview | 10 min | Yun-Yuan Wang | NVIDIA |
 | GPU Environment Setup on NVIDIA Brev | 10 min | Ming-Kang Ho | NCHC |
 | Quantum Kernel Programming with CUDA-Q | 30 min | Yun-Yuan Wang | NVIDIA |
-| Transformer-Based Optimization for QAOA | 35 min | Kuan-Cheng Chen | Imperial College London |
+| Transformer-Based Optimization for QAOA | 35 min | Kuan-Cheng Chen | JIJ Inc. |
 | Q&A | 5 min | All | — |
 
 <br>
